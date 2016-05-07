@@ -1,3 +1,14 @@
+### 0.5.7 (2 may 2016)
+- [Change] Compatibility change for KSP 1.1.2.
+- [Change] Migrate parts to the new enum in KISItem (see KIS 1.2.8 release notes).
+
+### 0.5.6 (21 April 2016)
+- [Change] KSP 1.1 supported!
+- [Change] Increase hooks break strength with respect to Unity 5 physics change.
+- [Change] Increase static attach strength on pylon to prevent joint breakage.
+- [Enhancement] Improved search tags and descriptions in parts.
+- [Fix] Fix bottom & srf attach nodes on pylon to make it more stable and prevent explosions on physics start.
+
 ### 0.5.5 (11 November 2015)
 - [Fix] Compatibility update for KSP 1.0.5
 

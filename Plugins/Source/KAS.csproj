@@ -4,13 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{3C0C1ACF-15FB-4852-A15A-BC3F16D3EF33}</ProjectGuid>
+    <ProjectGuid>{C3F73CD0-32DC-4FD4-9615-37C2751A25B8}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>KAS</RootNamespace>
     <AssemblyName>KAS</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <NoWin32Manifest>False</NoWin32Manifest>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -31,12 +33,21 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>Q:\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="KSPUtil">
+      <HintPath>Q:\KSP_Data\Managed\KSPUtil.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\KSP_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>Q:\KSP_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>Q:\KSP_Data\Managed\UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>Q:\KSP_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -60,11 +71,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>IF EXIST "C:\games\KSP" xcopy "$(TargetPath)" "C:\games\KSP\GameData\KAS\Plugins\" /Y
-IF EXIST "D:\games\KSP" xcopy "$(TargetPath)" "D:\games\KSP\GameData\KAS\Plugins\" /Y
-IF EXIST "E:\games\KSP" xcopy "$(TargetPath)" "E:\games\KSP\GameData\KAS\Plugins\" /Y
-del /q $(TargetDir)
-del /q $(SolutionDir)\obj\Debug\</PostBuildEvent>
+    <PostBuildEvent>IF EXIST "Q:\GameData\KIS" xcopy "$(TargetPath)" "Q:\GameData\KAS\Plugins\" /Y</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
