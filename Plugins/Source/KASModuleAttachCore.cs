@@ -68,12 +68,12 @@ public class KASModuleAttachCore : PartModule {
       FxNode.AddValue("tgtPartID", FixedAttach.tgtPart.flightID.ToString());
       FxNode.AddValue("tgtVesselID", FixedAttach.tgtPart.vessel.id.ToString());
       if (FixedAttach.fixedJoint) {
-        KAS_Shared.DebugLog("OnSave(Core) Saving breakforce from joint config : "
-                            + FixedAttach.fixedJoint.breakForce);
+        KAS_Shared.DebugLog(string.Format("OnSave(Core) Saving breakforce from joint config : {0}",
+                                          FixedAttach.fixedJoint.breakForce));
         FxNode.AddValue("breakForce", FixedAttach.fixedJoint.breakForce);
       } else {
-        KAS_Shared.DebugLog("OnSave(Core) Saving breakforce from saved : "
-                            + FixedAttach.savedBreakForce);
+        KAS_Shared.DebugLog(string.Format(
+            "OnSave(Core) Saving breakforce from saved : {0}", FixedAttach.savedBreakForce));
         FxNode.AddValue("breakForce", FixedAttach.savedBreakForce);
       }
     }
@@ -88,7 +88,7 @@ public class KASModuleAttachCore : PartModule {
         ConfigNode nodeD = node.AddNode("DOCKEDVESSEL");
         this.vesselInfo.Save(nodeD);
       } else {
-        KAS_Shared.DebugError("OnSave(Core) dockedAttachModule is null !");
+        KAS_Shared.DebugError("OnSave(Core) dockedAttachModule is null!");
       }         
     }
   }
@@ -108,13 +108,13 @@ public class KASModuleAttachCore : PartModule {
         FixedAttach.savedBreakForce = float.Parse(FxNode.GetValue("breakForce"));
         attachMode.FixedJoint = true;
       } else {
-        KAS_Shared.DebugWarning("OnLoad(Core) Missing node value(s) !");
+        KAS_Shared.DebugWarning("OnLoad(Core) Missing node value(s)!");
       }
     }
     if (node.HasNode("DOCKEDVESSEL") && node.HasValue("dockedPartID")) {
       KAS_Shared.DebugLog("OnLoad(Core) Loading docked info from save...");
-      this.vesselInfo = new DockedVesselInfo();
-      this.vesselInfo.Load(node.GetNode("DOCKEDVESSEL"));
+      vesselInfo = new DockedVesselInfo();
+      vesselInfo.Load(node.GetNode("DOCKEDVESSEL"));
       dockedPartID = node.GetValue("dockedPartID").ToString();
       attachMode.Docked = true;
     }
@@ -134,22 +134,22 @@ public class KASModuleAttachCore : PartModule {
       if (dockedPart && (dockedPart == part.parent || dockedPart.parent == part)) {
         KASModuleAttachCore dockedAttachModuleTmp = dockedPart.GetComponent<KASModuleAttachCore>();
         if (dockedAttachModuleTmp == null) {
-          KAS_Shared.DebugError("OnLoad(Core) Unable to get docked module !");
+          KAS_Shared.DebugError("OnLoad(Core) Unable to get docked module!");
           attachMode.Docked = false;
         } else if (dockedAttachModuleTmp.attachMode.Docked
                    && dockedAttachModuleTmp.dockedPartID == part.flightID.ToString()
                    && dockedAttachModuleTmp.vesselInfo != null) {
-          KAS_Shared.DebugLog("OnLoad(Core) Part already docked to "
-                              + dockedAttachModuleTmp.part.partInfo.title);
+          KAS_Shared.DebugLog(string.Format("OnLoad(Core) Part already docked to {0}",
+                                            dockedAttachModuleTmp.part.partInfo.title));
           this.dockedAttachModule = dockedAttachModuleTmp;
           dockedAttachModuleTmp.dockedAttachModule = this;
         } else {
-          KAS_Shared.DebugLog("OnLoad(Core) Re-set docking on "
-                              + dockedAttachModuleTmp.part.partInfo.title);
+          KAS_Shared.DebugLog(string.Format(
+              "OnLoad(Core) Re-set docking on {0}", dockedAttachModuleTmp.part.partInfo.title));
           AttachDocked(dockedAttachModuleTmp);
         }
       } else {
-        KAS_Shared.DebugError("OnLoad(Core) Unable to get saved docked part !");
+        KAS_Shared.DebugError("OnLoad(Core) Unable to get saved docked part!");
         attachMode.Docked = false;
       }
     }
@@ -181,7 +181,8 @@ public class KASModuleAttachCore : PartModule {
       Part tgtPart = KAS_Shared.GetPartByID(
           FixedAttach.savedTgtVesselID, FixedAttach.savedTgtPartID);
       if (tgtPart) {
-        KAS_Shared.DebugLog("OnLoad(Core) Re-set fixed joint on " + tgtPart.partInfo.title);
+        KAS_Shared.DebugLog(string.Format(
+            "OnLoad(Core) Re-set fixed joint on {0}", tgtPart.partInfo.title));
         AttachFixed(srcPart, tgtPart, FixedAttach.savedBreakForce);
       } else {
         KAS_Shared.DebugError(
@@ -199,8 +200,8 @@ public class KASModuleAttachCore : PartModule {
   }
 
   protected virtual void OnJointBreak(float breakForce) {
-    KAS_Shared.DebugWarning("OnJointBreak(Core) A joint broken on " + part.partInfo.title
-                            + " !, force: " + breakForce);
+    KAS_Shared.DebugWarning(string.Format(
+        "OnJointBreak(Core) A joint broken on {0} !, force: {1}", part.partInfo.title, breakForce));
     StartCoroutine(WaitAndCheckJoint());
   }
 
@@ -307,7 +308,7 @@ public class KASModuleAttachCore : PartModule {
     if (StaticAttach.connectedGameObject) {
       Destroy(StaticAttach.connectedGameObject);
     }
-    GameObject obj = new GameObject("KASBody");
+    var obj = new GameObject("KASBody");
     var objRigidbody = obj.AddComponent<Rigidbody>();
     objRigidbody.isKinematic = true;
     obj.transform.position = this.part.transform.position;
@@ -329,48 +330,49 @@ public class KASModuleAttachCore : PartModule {
 
   public void AttachDocked(KASModuleAttachCore otherAttachModule, Vessel forceDominant = null) {
     // Don't overwrite vesselInfo on redundant calls
-    if (this.part.vessel == otherAttachModule.part.vessel
+    if (part.vessel == otherAttachModule.part.vessel
         && attachMode.Docked && dockedAttachModule == otherAttachModule
         && otherAttachModule.attachMode.Docked && otherAttachModule.dockedAttachModule == this
-        && this.vesselInfo != null && otherAttachModule.vesselInfo != null) {
+        && vesselInfo != null && otherAttachModule.vesselInfo != null) {
       KAS_Shared.DebugWarning("DockTo(Core) Parts already docked, nothing to do at all");
       return;
     }
 
     // Save vessel Info
-    this.vesselInfo = new DockedVesselInfo();
-    this.vesselInfo.name = this.vessel.vesselName;
-    this.vesselInfo.vesselType = this.vessel.vesselType;
-    this.vesselInfo.rootPartUId = this.vessel.rootPart.flightID;
-    this.dockedAttachModule = otherAttachModule;
-    this.dockedPartID = otherAttachModule.part.flightID.ToString();
+    vesselInfo = new DockedVesselInfo();
+    vesselInfo.name = vessel.vesselName;
+    vesselInfo.vesselType = vessel.vesselType;
+    vesselInfo.rootPartUId = vessel.rootPart.flightID;
+    dockedAttachModule = otherAttachModule;
+    dockedPartID = otherAttachModule.part.flightID.ToString();
 
     otherAttachModule.vesselInfo = new DockedVesselInfo();
     otherAttachModule.vesselInfo.name = otherAttachModule.vessel.vesselName;
     otherAttachModule.vesselInfo.vesselType = otherAttachModule.vessel.vesselType;
     otherAttachModule.vesselInfo.rootPartUId = otherAttachModule.vessel.rootPart.flightID;
     otherAttachModule.dockedAttachModule = this;
-    otherAttachModule.dockedPartID = this.part.flightID.ToString();
+    otherAttachModule.dockedPartID = part.flightID.ToString();
 
     // Set reference
-    attachMode.Docked = otherAttachModule.attachMode.Docked = true;
+    attachMode.Docked = true;
+    otherAttachModule.attachMode.Docked = true;
 
     // Stop if already docked
-    if (otherAttachModule.part.parent == this.part || this.part.parent == otherAttachModule.part) {
+    if (otherAttachModule.part.parent == part || part.parent == otherAttachModule.part) {
       KAS_Shared.DebugWarning("DockTo(Core) Parts already docked, nothing more to do");
       return;
     }
 
-    // This results in a somewhat wrong state, but it's better to not make it even more wrong
-    if (otherAttachModule.part.vessel == this.part.vessel) {
+    // This results in a somewhat wrong state, but it's better to not make it even more wrong.
+    if (otherAttachModule.part.vessel == part.vessel) {
       KAS_Shared.DebugWarning("DockTo(Core) BUG: Parts belong to the same vessel, doing nothing");
       return;
     }
 
     // Reset vessels position and rotation for returning all parts to their original position and
     // rotation before coupling
-    this.vessel.SetPosition(this.vessel.transform.position, true);
-    this.vessel.SetRotation(this.vessel.transform.rotation);
+    vessel.SetPosition(vessel.transform.position, true);
+    vessel.SetRotation(vessel.transform.rotation);
     otherAttachModule.vessel.SetPosition(otherAttachModule.vessel.transform.position, true);
     otherAttachModule.vessel.SetRotation(otherAttachModule.vessel.transform.rotation);
           
@@ -382,31 +384,35 @@ public class KASModuleAttachCore : PartModule {
       dominantVessel = forceDominant;
     }
 
-    KAS_Shared.DebugLog("DockTo(Core) Master vessel is " + dominantVessel.vesselName);
+    KAS_Shared.DebugLog(string.Format("DockTo(Core) Master vessel is {0}",
+                                      dominantVessel.vesselName));
           
     if (dominantVessel == this.vessel) {
-      KAS_Shared.DebugLog("DockTo(Core) Docking " + otherAttachModule.part.partInfo.title
-                          + " from " + otherAttachModule.vessel.vesselName
-                          + " with " + this.part.partInfo.title
-                          + " from " + this.vessel.vesselName);
+      KAS_Shared.DebugLog(string.Format("DockTo(Core) Docking {0} from {1} with {2} from {3}",
+                                        otherAttachModule.part.partInfo.title,
+                                        otherAttachModule.vessel.vesselName,
+                                        part.partInfo.title,
+                                        vessel.vesselName));
       if (FlightGlobals.ActiveVessel == otherAttachModule.part.vessel) {
-        KAS_Shared.DebugLog("DockTo(Core) Switching focus to " + this.part.vessel.vesselName);
+        KAS_Shared.DebugLog(string.Format("DockTo(Core) Switching focus to {0}",
+                                          this.part.vessel.vesselName));
         FlightGlobals.ForceSetActiveVessel(this.part.vessel);
         FlightInputHandler.ResumeVesselCtrlState(this.part.vessel);
       }
       otherAttachModule.part.Couple(this.part);
     } else {
-      KAS_Shared.DebugLog("DockTo(Core) Docking " + this.part.partInfo.title
-                          + " from " + this.vessel.vesselName
-                          + " with " + otherAttachModule.part.partInfo.title
-                          + " from " + otherAttachModule.vessel.vesselName);
-      if (FlightGlobals.ActiveVessel == this.part.vessel) {
-        KAS_Shared.DebugLog("DockTo(Core) Switching focus to "
-                            + otherAttachModule.part.vessel.vesselName);
+      KAS_Shared.DebugLog(string.Format("DockTo(Core) Docking {0} from {1} with {2} from {3}",
+                                        part.partInfo.title,
+                                        vessel.vesselName,
+                                        otherAttachModule.part.partInfo.title,
+                                        otherAttachModule.vessel.vesselName));
+      if (FlightGlobals.ActiveVessel == part.vessel) {
+        KAS_Shared.DebugLog(string.Format("DockTo(Core) Switching focus to {0}",
+                                          otherAttachModule.part.vessel.vesselName));
         FlightGlobals.ForceSetActiveVessel(otherAttachModule.part.vessel);
         FlightInputHandler.ResumeVesselCtrlState(otherAttachModule.part.vessel);
       }
-      this.part.Couple(otherAttachModule.part);
+      part.Couple(otherAttachModule.part);
     }
 
     GameEvents.onVesselWasModified.Fire(this.part.vessel);
@@ -424,18 +430,10 @@ public class KASModuleAttachCore : PartModule {
     // Check 2- If type are the same, dominant vessel will be the heaviest
     float diffMass = Mathf.Abs((v1.GetTotalMass() - v2.GetTotalMass()));
     if (diffMass >= 0.01f) {
-      if (v1.GetTotalMass() <= v2.GetTotalMass()) {
-        return v2;
-      } else {
-        return v1;
-      }
+      return v1.GetTotalMass() <= v2.GetTotalMass() ? v2 : v1;
     }
     // Check 3 - If weight is similar, dominant vessel will be the one with the higher ID
-    if (v1.id.CompareTo(v2.id) <= 0) {
-      return v2;
-    } else {
-      return v1;
-    }     
+    return v1.id.CompareTo(v2.id) <= 0 ? v2 : v1;
   }
 
   public void Detach() {
@@ -470,22 +468,22 @@ public class KASModuleAttachCore : PartModule {
   }
 
   public void Detach(AttachType attachType) {
-    KAS_Shared.DebugLog("Detach(Base) Attach mode is Docked:" + attachMode.Docked
-                        + ",Coupled:" + attachMode.Coupled
-                        + ",FixedJoint:" + attachMode.FixedJoint
-                        + ",StaticJoint:" + attachMode.StaticJoint);
-    KAS_Shared.DebugLog("Detach(Base) Attach type is : " + attachType);
+    KAS_Shared.DebugLog(string.Format(
+        "Detach(Base) Attach mode is Docked:{0},Coupled:{1},FixedJoint:{2},StaticJoint:{3}",
+        attachMode.Docked, attachMode.Coupled, attachMode.FixedJoint, attachMode.StaticJoint));
+    KAS_Shared.DebugLog(string.Format("Detach(Base) Attach type is : {0}", attachType));
 
     // Docked
     if (attachType == AttachType.Docked) {
       if (dockedAttachModule.part.parent == this.part) {
-        KAS_Shared.DebugLog("Detach(Base) Undocking " + dockedAttachModule.part.partInfo.title
-                            + " from " + dockedAttachModule.vessel.vesselName);
+        KAS_Shared.DebugLog(string.Format("Detach(Base) Undocking {0} from {1}",
+                                          dockedAttachModule.part.partInfo.title,
+                                          dockedAttachModule.vessel.vesselName));
         dockedAttachModule.UndockVessel();
       }
       if (this.part.parent == dockedAttachModule.part) {
-        KAS_Shared.DebugLog("Detach(Base) Undocking " + this.part.partInfo.title
-                            + " from " + this.vessel.vesselName);
+        KAS_Shared.DebugLog(string.Format(
+            "Detach(Base) Undocking {0} from {1}", part.partInfo.title, vessel.vesselName));
         this.UndockVessel();
       }
       if (dockedAttachModule.dockedAttachModule == this) {
@@ -493,19 +491,19 @@ public class KASModuleAttachCore : PartModule {
         dockedAttachModule.dockedPartID = null;
         dockedAttachModule.attachMode.Docked = false;
       }
-      this.dockedAttachModule = null;
-      this.dockedPartID = null;
+      dockedAttachModule = null;
+      dockedPartID = null;
       attachMode.Docked = false;
     }
     // Coupled
     if (attachType == AttachType.Coupled) {
-      // Todo
+      // TODO???
       attachMode.Coupled = false;
     }
     // FixedJoint
     if (attachType == AttachType.FixedJoint) {
-      KAS_Shared.DebugLog("Detach(Base) Removing fixed joint on "
-                          + FixedAttach.srcPart.partInfo.title);
+      KAS_Shared.DebugLog(string.Format(
+          "Detach(Base) Removing fixed joint on {0}", FixedAttach.srcPart.partInfo.title));
       if (FixedAttach.fixedJoint) {
         Destroy(FixedAttach.fixedJoint);
       }
@@ -516,8 +514,8 @@ public class KASModuleAttachCore : PartModule {
     }
     // StaticJoint
     if (attachType == AttachType.StaticJoint) {
-      KAS_Shared.DebugLog("Detach(Base) Removing static rigidbody and fixed joint on "
-                          + this.part.partInfo.title);
+      KAS_Shared.DebugLog(string.Format(
+          "Detach(Base) Removing static rigidbody and fixed joint on {0}", part.partInfo.title));
       if (StaticAttach.fixedJoint) {
         Destroy(StaticAttach.fixedJoint);
       }

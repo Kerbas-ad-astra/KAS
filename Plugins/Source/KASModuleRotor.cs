@@ -158,9 +158,7 @@ public class KASModuleRotor : PartModule {
       KAS_Shared.DebugLog("LoadRotor(Rotor) - KASModulePhysicChild do not exist, adding it...");
       rotorPhysicModule = this.part.gameObject.AddComponent<KASModulePhysicChild>();
     }
-    rotorPhysicModule.mass = rotorMass;
-    rotorPhysicModule.physicObj = rotorTransform.gameObject;
-    rotorPhysicModule.Start();
+    rotorPhysicModule.StartPhysics(rotorTransform.gameObject, rotorMass);
 
     orgRotorMass = this.part.mass;
     float newMass = this.part.mass - rotorMass;
@@ -323,8 +321,9 @@ public class KASModuleRotor : PartModule {
       rotorActivated = true;
     } else {
       if (this.part.vessel == FlightGlobals.ActiveVessel) {
-        ScreenMessages.PostScreenMessage(this.part.partInfo.title + " stopped ! Insufficient Power",
-                                         5, ScreenMessageStyle.UPPER_CENTER);
+        ScreenMessages.PostScreenMessage(
+            string.Format("{0} stopped ! Insufficient Power", this.part.partInfo.title),
+            5, ScreenMessageStyle.UPPER_CENTER);
       }
       stateField = "Insufficient Power";
     }

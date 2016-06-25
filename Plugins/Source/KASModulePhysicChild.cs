@@ -5,87 +5,105 @@ using System.Collections;
 namespace KAS {
 
 public class KASModulePhysicChild : PartModule {
-  public float mass = 0.01f;
-  public GameObject physicObj;
+  /// <summary>Local position to save during (un)packing.</summary>
+  Vector3 currentLocalPos;
+  /// <summary>Local roattion to save during (un)packing.</summary>
+  Quaternion currentLocalRot;
+  /// <summary>A physics object. This module doesn't own it.</summary>
+  GameObject physicObj;
+  /// <summary>Cached rigidbody of the physics object.</summary>
+  Rigidbody physicObjRb;
 
-  private bool physicActive = false;
-  private Vector3 currentLocalPos;
-  private Quaternion currentLocalRot;
-
-  // Methods
-  public void Start() {
-    KAS_Shared.DebugLog("Start(PhysicChild)");
-    if (!physicActive) {
-      var physicObjRigidbody = physicObj.AddComponent<Rigidbody>();
-      physicObjRigidbody.mass = mass;
+  /// <summary>Starts physics handling on the object.</summary>
+  /// <remarks>The object is expected to not have rigidbody. The one will be added with the proper
+  /// mass and velocity settings. Parent transform of the physics object will be set top
+  /// <c>null</c>, and it will become an idependent object.</remarks>
+  /// <param name="physicObj">Game object to attach physics to.</param>
+  /// <param name="mass">Mass of the rigidbody.</param>
+  public void StartPhysics(GameObject physicObj, float mass) {
+    KAS_Shared.DebugLog("StartPhysics(PhysicChild)");
+    if (this.physicObj == null) {
+      this.physicObj = physicObj;
+      physicObjRb = physicObj.AddComponent<Rigidbody>();
       physicObj.transform.parent = null;
-      physicObjRigidbody.useGravity = true;
-      physicObjRigidbody.velocity = this.part.Rigidbody.velocity;
-      physicObjRigidbody.angularVelocity = this.part.Rigidbody.angularVelocity;
-      FlightGlobals.addPhysicalObject(physicObj);
-      physicActive = true;
+      physicObjRb.mass = mass;
+      physicObjRb.useGravity = false;
+      physicObjRb.velocity = part.Rigidbody.velocity;
+      physicObjRb.angularVelocity = part.Rigidbody.angularVelocity;
     } else {
-      KAS_Shared.DebugWarning("Start(PhysicChild) Physic already started !");
+      KAS_Shared.DebugWarning("StartPhysics(PhysicChild) Physic already started! Ignore.");
     }
   }
 
-  public void OnPartPack() {
-    if (physicActive) {
+  /// <summary>Stops physics handling on the object.</summary>
+  /// <remarks>Rigidbody on the object gets destroyed.</remarks>
+  public void StopPhysics() {
+    KAS_Shared.DebugLog("StopPhysics(PhysicChild)");
+    if (physicObj != null) {
+      UnityEngine.Object.Destroy(physicObjRb);
+      physicObjRb = null;
+      physicObj.transform.parent = part.transform;
+      physicObj = null;
+    } else {
+      KAS_Shared.DebugWarning("StopPhysics(PhysicChild) Physic already stopped! Ignore.");
+    }
+  }
+
+  /// <summary>Part's message handler.</summary>
+  /// <remarks>Temporarily suspends physics handling on the object.</remarks>
+  void OnPartPack() {
+    if (physicObj != null) {
       KAS_Shared.DebugLog("OnPartPack(PhysicChild)");
-      currentLocalPos = KAS_Shared.GetLocalPosFrom(physicObj.transform, this.part.transform);
-      currentLocalRot = KAS_Shared.GetLocalRotFrom(physicObj.transform, this.part.transform);
-      FlightGlobals.removePhysicalObject(physicObj);
-      physicObj.GetComponent<Rigidbody>().isKinematic = true;
-      physicObj.transform.parent = this.part.transform;
+      currentLocalPos = KAS_Shared.GetLocalPosFrom(physicObj.transform, part.transform);
+      currentLocalRot = KAS_Shared.GetLocalRotFrom(physicObj.transform, part.transform);
+      physicObjRb.isKinematic = true;
+      physicObj.transform.parent = part.transform;
       StartCoroutine(WaitPhysicUpdate());
     }
   }
 
-  public void OnPartUnpack() {
-    if (physicActive) {
-      var physicObjRigidbody = physicObj.GetComponent<Rigidbody>();
-      if (physicObjRigidbody.isKinematic) {
-        KAS_Shared.DebugLog("OnPartUnpack(PhysicChild)");
-        physicObj.transform.parent = null;
-        KAS_Shared.SetPartLocalPosRotFrom(
-            physicObj.transform, this.part.transform, currentLocalPos, currentLocalRot);
-        physicObjRigidbody.isKinematic = false;
-        FlightGlobals.addPhysicalObject(physicObj);
-        StartCoroutine(WaitPhysicUpdate());
-      }
+  /// <summary>Part's message handler.</summary>
+  /// <remarks>Resumes physics handling on the object.</remarks>
+  void OnPartUnpack() {
+    if (physicObj != null && physicObjRb.isKinematic) {
+      KAS_Shared.DebugLog("OnPartUnpack(PhysicChild)");
+      physicObj.transform.parent = null;
+      KAS_Shared.SetPartLocalPosRotFrom(
+          physicObj.transform, part.transform, currentLocalPos, currentLocalRot);
+      physicObjRb.isKinematic = false;
+      StartCoroutine(WaitPhysicUpdate());
     }
   }
 
-  private IEnumerator WaitPhysicUpdate() {
+  /// <summary>Overriden from MonoBehavior.</summary>
+  void OnDestroy() {
+    KAS_Shared.DebugLog("OnDestroy(PhysicChild)");
+    if (physicObjRb != null) {
+      StopPhysics();
+    }
+  }
+
+  /// <summary>Overriden from MonoBehavior.</summary>
+  void FixedUpdate() {
+    if (physicObjRb != null && !physicObjRb.isKinematic) {
+      physicObjRb.AddForce(part.vessel.graviticAcceleration, ForceMode.Acceleration);
+    }
+  }
+
+  /// <summary>Aligns position, rotation and velocity of the rigidbody.</summary>
+  /// <remarks>The update is delayed till the next fixed update to let game's physics to work.
+  /// </remarks>
+  /// <returns>Nothing.</returns>
+  IEnumerator WaitPhysicUpdate() {
     yield return new WaitForFixedUpdate();
     KAS_Shared.SetPartLocalPosRotFrom(
-        physicObj.transform, this.part.transform, currentLocalPos, currentLocalRot);
-    var physicObjRigidbody = physicObj.GetComponent<Rigidbody>();
-    if (physicObjRigidbody.isKinematic == false) {
-      KAS_Shared.DebugLog("WaitPhysicUpdate(PhysicChild) Set velocity to : "
-                          + this.part.Rigidbody.velocity + " | angular velocity : "
-                          + this.part.Rigidbody.angularVelocity);
-      physicObjRigidbody.angularVelocity = this.part.Rigidbody.angularVelocity;
-      physicObjRigidbody.velocity = this.part.Rigidbody.velocity;
-    }
-  }
-
-  public void Stop() {
-    KAS_Shared.DebugLog("Stop(PhysicChild)");
-    if (physicActive) {
-      FlightGlobals.removePhysicalObject(physicObj);
-      UnityEngine.Object.Destroy(physicObj.GetComponent<Rigidbody>());
-      physicObj.transform.parent = this.part.transform;
-      physicActive = false;
-    } else {
-      KAS_Shared.DebugWarning("Stop(PhysicChild) Physic already stopped !");
-    }
-  }
-
-  private void OnDestroy() {
-    KAS_Shared.DebugLog("OnDestroy(PhysicChild)");
-    if (physicActive) {
-      Stop();
+        physicObj.transform, part.transform, currentLocalPos, currentLocalRot);
+    if (!physicObjRb.isKinematic) {
+      KAS_Shared.DebugLog(
+          "WaitPhysicUpdate(PhysicChild) Set velocity to: {0} | angular velocity: {1}",
+          part.Rigidbody.velocity, part.Rigidbody.angularVelocity);
+      physicObjRb.angularVelocity = part.Rigidbody.angularVelocity;
+      physicObjRb.velocity = part.Rigidbody.velocity;
     }
   }
 }

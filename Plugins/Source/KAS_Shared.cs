@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using KSP.IO;
+using KSP.UI.Screens;
 
 namespace KAS {
 
@@ -30,27 +31,21 @@ static public class KAS_Shared {
   private static Vector3 vectTest = Vector3.forward;
   private static bool inputLock = false;
 
-  public static void DebugLog(string text) {
+  public static void DebugLog(string format, params object[] args) {
     if (debugLogActive) {
-      Debug.Log("[KAS] " + text);
+      Debug.LogFormat(format, args);
     }
   }
 
-  public static void DebugLog(string text, UnityEngine.Object context) {
+  public static void DebugWarning(string format, params object[] args) {
     if (debugLogActive) {
-      Debug.Log("[KAS] " + text, context);
+      Debug.LogWarningFormat(format, args);
     }
   }
 
-  public static void DebugWarning(string text) {
+  public static void DebugError(string format, params object[] args) {
     if (debugLogActive) {
-      Debug.LogWarning("[KAS] " + text);
-    }
-  }
-
-  public static void DebugError(string text) {
-    if (debugLogActive) {
-      Debug.LogError("[KAS] " + text);
+      Debug.LogErrorFormat(format, args);
     }
   }
 
@@ -211,25 +206,6 @@ static public class KAS_Shared {
       }
     }
     return evaCollider;
-  }
-
-  public static void CreatePhysicObject(Transform transf, float mass,
-                                        Rigidbody copyRbVelFrom = null) {
-    var transfRigidbody = transf.gameObject.AddComponent<Rigidbody>();
-    transfRigidbody.mass = mass;
-    transf.transform.parent = null;
-    transfRigidbody.useGravity = true;
-    if (copyRbVelFrom) {
-      transfRigidbody.velocity = copyRbVelFrom.velocity;
-      transfRigidbody.angularVelocity = copyRbVelFrom.angularVelocity;
-    }
-    FlightGlobals.addPhysicalObject(transf.gameObject);
-  }
-
-  public static void RemovePhysicObject(Part p, Transform transf) {
-    FlightGlobals.removePhysicalObject(transf.gameObject);
-    UnityEngine.Object.Destroy(transf.GetComponent<Rigidbody>());
-    transf.parent = p.transform;
   }
 
   public static void ResetCollisionEnhancer(Part p, bool create_new = true) {
@@ -431,10 +407,10 @@ static public class KAS_Shared {
 
     //v.landedAt = "somewhere";
                       
-    Staging.beginFlight();
+    StageManager.BeginFlight();
     newShip.parts[0].vessel.ResumeStaging();
-    Staging.GenerateStagingSequence(newShip.parts[0].localRoot);
-    Staging.RecalculateVesselStaging(newShip.parts[0].vessel);
+    StageManager.GenerateStagingSequence(newShip.parts[0].localRoot);
+    StageManager.RecalculateVesselStaging(newShip.parts[0].vessel);
 
     FlightGlobals.SetActiveVessel(currentVessel);
 
@@ -928,7 +904,8 @@ static public class KAS_Shared {
     } else {
       KAS_Shared.DebugError("Sound not found in the game database !");
       ScreenMessages.PostScreenMessage(
-          "Sound file : " + sndPath + " as not been found, please check your KAS installation !",
+          string.Format("Sound file : {0} as not been found, please check your KAS installation !",
+                        sndPath),
           10, ScreenMessageStyle.UPPER_CENTER);
       return false;
     }     

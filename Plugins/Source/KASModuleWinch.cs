@@ -20,7 +20,7 @@ public class KASModuleWinch : KASModuleAttachCore {
   [KSPField]
   public float motorMinSpeed = 0.01f;
   [KSPField]
-  public float motorAcceleration = 0.05f;
+  public float motorAcceleration = 0.4f;  // Speed change per second.
   [KSPField]
   public float powerDrain = 0.5f;
   [KSPField]
@@ -210,7 +210,7 @@ public class KASModuleWinch : KASModuleAttachCore {
 
   public KASModulePort nodeConnectedPort {
     get {
-      AttachNode an = this.part.findAttachNode(connectedPortNodeName);
+      AttachNode an = part.findAttachNode(connectedPortNodeName);
       if (an != null) {
         if (an.attachedPart) {
           KASModulePort portModule = an.attachedPart.GetComponent<KASModulePort>();
@@ -326,22 +326,23 @@ public class KASModuleWinch : KASModuleAttachCore {
     if (!texCable) {
       KAS_Shared.DebugError("cable texture loading error !");
       ScreenMessages.PostScreenMessage(
-          "Texture file : " + cableTexPath
-          + " as not been found, please check your KAS installation !",
+          string.Format(
+              "Texture file : {0} as not been found, please check your KAS installation !",
+              cableTexPath),
           10, ScreenMessageStyle.UPPER_CENTER);
     }
-    KAS_Shared.createFXSound(this.part, fxSndMotorStart, motorStartSndPath, false);
-    KAS_Shared.createFXSound(this.part, fxSndMotor, motorSndPath, true);
-    KAS_Shared.createFXSound(this.part, fxSndMotorStop, motorStopSndPath, false);
-    KAS_Shared.createFXSound(this.part, fxSndHeadLock, headLockSndPath, false);
-    KAS_Shared.createFXSound(this.part, fxSndEject, ejectSndPath, false);
-    KAS_Shared.createFXSound(this.part, fxSndHeadGrab, headGrabSndPath, false);
+    KAS_Shared.createFXSound(part, fxSndMotorStart, motorStartSndPath, false);
+    KAS_Shared.createFXSound(part, fxSndMotor, motorSndPath, true);
+    KAS_Shared.createFXSound(part, fxSndMotorStop, motorStopSndPath, false);
+    KAS_Shared.createFXSound(part, fxSndHeadLock, headLockSndPath, false);
+    KAS_Shared.createFXSound(part, fxSndEject, ejectSndPath, false);
+    KAS_Shared.createFXSound(part, fxSndHeadGrab, headGrabSndPath, false);
 
     // Get head transform
     headTransform = this.part.FindModelTransform(headTransformName);
     if (!headTransform) {
-      KAS_Shared.DebugError("OnStart(Winch) Head transform " + headTransformName
-                            + " not found in the model !");
+      KAS_Shared.DebugError(
+          "OnStart(Winch) Head transform {0} not found in the model !", headTransformName);
       DisableWinch();
       return;
     }
@@ -349,8 +350,8 @@ public class KASModuleWinch : KASModuleAttachCore {
     // get winch anchor node
     winchAnchorNode = this.part.FindModelTransform(anchorNodeName);
     if (!winchAnchorNode) {
-      KAS_Shared.DebugError("OnStart(Winch) Winch anchor tranform node " + anchorNodeName
-                            + " not found in the model !");
+      KAS_Shared.DebugError(
+          "OnStart(Winch) Winch anchor tranform node {0} not found in the model !", anchorNodeName);
       DisableWinch();
       return;
     }
@@ -358,8 +359,8 @@ public class KASModuleWinch : KASModuleAttachCore {
     // Get head port node
     headPortNode = this.part.FindModelTransform(headPortNodeName);
     if (!headPortNode) {
-      KAS_Shared.DebugError("OnStart(Winch) Head transform port node " + headPortNodeName
-                            + " not found in the model !");
+      KAS_Shared.DebugError(
+          "OnStart(Winch) Head transform port node {0} not found in the model !", headPortNodeName);
       DisableWinch();
       return;
     }
@@ -387,15 +388,10 @@ public class KASModuleWinch : KASModuleAttachCore {
     headOrgLocalPos = KAS_Shared.GetLocalPosFrom(headTransform, this.part.transform);
     headOrgLocalRot = KAS_Shared.GetLocalRotFrom(headTransform, this.part.transform);
 
-    if (nodeConnectedPort) {
-      KAS_Shared.DebugWarning("OnStart(Winch) NodeConnectedPort is : "
-                              + nodeConnectedPort.part.partInfo.title);
-    } else {
-      if (nodeConnectedPart) {
-        KAS_Shared.DebugWarning(
-            "OnStart(Winch) Connected part is not a port, configuration not supported !");
-        isBlocked = true;
-        headState = PlugState.Locked;
+    if (headState == PlugState.PlugDocked) {
+      if (nodeConnectedPort) {
+        KAS_Shared.DebugLog(
+            "OnStart(Winch) NodeConnectedPort is : {0}", nodeConnectedPort.part.partInfo.title);
       } else {
         KAS_Shared.DebugWarning("OnStart(Winch) No connected part found !");
       }
@@ -414,11 +410,10 @@ public class KASModuleWinch : KASModuleAttachCore {
 
     motorSpeedSetting = motorMaxSpeed / 2;
 
-    KAS_Shared.DebugWarning("OnStart(Winch) HeadState : " + headState);
-    GameEvents.onVesselGoOnRails.Add(new EventData<Vessel>.OnEvent(this.OnVesselGoOnRails));
-    GameEvents.onVesselGoOffRails.Add(new EventData<Vessel>.OnEvent(this.OnVesselGoOffRails));
-    GameEvents.onCrewBoardVessel.Add(
-        new EventData<GameEvents.FromToAction<Part, Part>>.OnEvent(this.OnCrewBoardVessel));
+    KAS_Shared.DebugLog("OnStart(Winch) HeadState : {0}", headState);
+    GameEvents.onVesselGoOnRails.Add(OnVesselGoOnRails);
+    GameEvents.onVesselGoOffRails.Add(OnVesselGoOffRails);
+    GameEvents.onCrewBoardVessel.Add(OnCrewBoardVessel);
   }
 
   IEnumerator WaitAndLoadConnection() {
@@ -426,8 +421,8 @@ public class KASModuleWinch : KASModuleAttachCore {
 
     // Get saved port module if any
     if (headState == PlugState.PlugDocked || headState == PlugState.PlugUndocked) {
-      KAS_Shared.DebugLog("OnStart(Winch) Retrieve part with ID : " + connectedPortInfo.savedPartID
-                          + " | From vessel ID : " + connectedPortInfo.savedVesselID);
+      KAS_Shared.DebugLog("OnStart(Winch) Retrieve part with ID : {0} | From vessel ID : {1}",
+                          connectedPortInfo.savedPartID, connectedPortInfo.savedVesselID);
       Part connectedPartSaved =
           KAS_Shared.GetPartByID(connectedPortInfo.savedVesselID, connectedPortInfo.savedPartID);
       if (connectedPartSaved) {
@@ -469,15 +464,15 @@ public class KASModuleWinch : KASModuleAttachCore {
     }
 
     if (headState == PlugState.PlugUndocked && fromSave) {
-      KAS_Shared.DebugLog("OnVesselGoOffRails(Winch) From save, Plug (undocked) to : "
-                          + connectedPortInfo.module.part.partInfo.title);
+      KAS_Shared.DebugLog("OnVesselGoOffRails(Winch) From save, Plug (undocked) to : {0}",
+                          connectedPortInfo.module.part.partInfo.title);
       PlugHead(connectedPortInfo.module, PlugState.PlugUndocked, true, false);
       fromSave = false;
     }
 
     if (headState == PlugState.PlugDocked && fromSave) {
-      KAS_Shared.DebugLog("OnVesselGoOffRails(Winch) From save, Plug (docked) to : "
-                          + connectedPortInfo.module.part.partInfo.title);
+      KAS_Shared.DebugLog("OnVesselGoOffRails(Winch) From save, Plug (docked) to : {0}",
+                          connectedPortInfo.module.part.partInfo.title);
       PlugHead(connectedPortInfo.module, PlugState.PlugDocked, true, false, true);
       fromSave = false;
     }
@@ -488,9 +483,9 @@ public class KASModuleWinch : KASModuleAttachCore {
 
   void OnCrewBoardVessel(GameEvents.FromToAction<Part, Part> fromToAction) {
     if (evaHolderPart && !grabbedPortModule && fromToAction.from.vessel == evaHolderPart.vessel) {
-      KAS_Shared.DebugLog(fromToAction.from.vessel.vesselName + " boarding "
-                          + fromToAction.to.vessel.vesselName
-                          + " with a winch head grabbed, dropping it to avoid destruction");
+      KAS_Shared.DebugLog(
+          "{0} boarding {1} with a winch head grabbed, dropping it to avoid destruction",
+          fromToAction.from.vessel.vesselName, fromToAction.to.vessel.vesselName);
       DropHead();
     }
   }
@@ -507,10 +502,9 @@ public class KASModuleWinch : KASModuleAttachCore {
   protected override void OnDestroy() {
     base.OnDestroy();
 
-    GameEvents.onVesselGoOnRails.Remove(new EventData<Vessel>.OnEvent(this.OnVesselGoOnRails));
-    GameEvents.onVesselGoOffRails.Remove(new EventData<Vessel>.OnEvent(this.OnVesselGoOffRails));
-    GameEvents.onCrewBoardVessel.Remove(
-        new EventData<GameEvents.FromToAction<Part, Part>>.OnEvent(this.OnCrewBoardVessel));
+    GameEvents.onVesselGoOnRails.Remove(OnVesselGoOnRails);
+    GameEvents.onVesselGoOffRails.Remove(OnVesselGoOffRails);
+    GameEvents.onCrewBoardVessel.Remove(OnCrewBoardVessel);
   }
 
   protected override void OnPartDie() {
@@ -610,12 +604,7 @@ public class KASModuleWinch : KASModuleAttachCore {
         if (motorSpeedSetting <= 0) {
           motorSpeedSetting = motorMinSpeed;
         }
-        if (motorSpeed < motorSpeedSetting) {
-          motorSpeed += motorAcceleration;
-        }
-        if (motorSpeed > motorSpeedSetting + motorAcceleration) {
-          motorSpeed -= motorAcceleration;
-        }
+        BringMotorToSpeed(motorSpeedSetting);
         float tempCablelenghtE = cableJointLength + motorSpeed * TimeWarp.deltaTime;
         if (tempCablelenghtE > maxLenght) {
           extend.full = true;
@@ -662,12 +651,7 @@ public class KASModuleWinch : KASModuleAttachCore {
         if (motorSpeedSetting <= 0) {
           motorSpeedSetting = motorMinSpeed;
         }
-        if (motorSpeed < motorSpeedSetting) {
-          motorSpeed += motorAcceleration;
-        }
-        if (motorSpeed > motorSpeedSetting + motorAcceleration) {
-          motorSpeed -= motorAcceleration;
-        }
+        BringMotorToSpeed(motorSpeedSetting);
         float tempCableLenghtR = cableJointLength - motorSpeed * TimeWarp.deltaTime;
         if (tempCableLenghtR > 0) {
           if (!fxSndMotor.audio.isPlaying) {
@@ -922,12 +906,10 @@ public class KASModuleWinch : KASModuleAttachCore {
             "SetHeadToPhysic(Winch) - KASModulePhysicChild do not exist, adding it...");
         headPhysicModule = this.part.gameObject.AddComponent<KASModulePhysicChild>();
       }
-      headPhysicModule.mass = headMass;
-      headPhysicModule.physicObj = headTransform.gameObject;
-      headPhysicModule.Start();
+      headPhysicModule.StartPhysics(headTransform.gameObject, headMass);
     } else {
-      headPhysicModule.Stop();
-      Destroy(headPhysicModule);
+      // Yes, it must be immediate. Otherwise, the further code will try to behave on the module.
+      DestroyImmediate(headPhysicModule);
     }
   }
 
@@ -978,18 +960,20 @@ public class KASModuleWinch : KASModuleAttachCore {
       return;
     }
 
-    if (!alreadyDocked) {
+    if (!alreadyDocked && !fromSave) {
       if (portModule.strutConnected()) {
-        ScreenMessages.PostScreenMessage(portModule.part.partInfo.title + " is already used !",
-                                         5, ScreenMessageStyle.UPPER_CENTER);
+        ScreenMessages.PostScreenMessage(
+            string.Format("{0} is already used !", portModule.part.partInfo.title),
+            5, ScreenMessageStyle.UPPER_CENTER);
         return;
       }
       if (portModule.plugged) {
-        ScreenMessages.PostScreenMessage(portModule.part.partInfo.title + " is already used !",
-                                         5, ScreenMessageStyle.UPPER_CENTER);
+        ScreenMessages.PostScreenMessage(
+            string.Format("{0} is already used !", portModule.part.partInfo.title),
+            5, ScreenMessageStyle.UPPER_CENTER);
         return;
       }
-      if (this.part.vessel == portModule.part.vessel && fromSave == false) {
+      if (this.part.vessel == portModule.part.vessel) {
         plugMode = PlugState.PlugUndocked;
       }
     }
@@ -1104,8 +1088,7 @@ public class KASModuleWinch : KASModuleAttachCore {
       rb.AddForce(force, ForceMode.Force);
       StartCoroutine(LimitFreeFlyDistance(rb, cableJointLength));
       rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-      KAS_Shared.DebugLog(string.Format(
-          "Set collision mode to ContinuousDynamic on part {0}", rb));
+      KAS_Shared.DebugLog("Set collision mode to ContinuousDynamic on part {0}", rb);
 
       // Compensate recoil on the winch.
       this.part.Rigidbody.AddForce(-force, ForceMode.Force);
@@ -1126,37 +1109,40 @@ public class KASModuleWinch : KASModuleAttachCore {
 
     // Figure out how much time it will take for harpoon to fly at the maximum distance. 
     var maxTimeToFly = cableJointLength / rb.velocity.magnitude;
-    KAS_Shared.DebugLog(string.Format(
+    KAS_Shared.DebugLog(
         "Projectile {0} has been ejected at speed {1}. Max cable length {2} will be exahusted"
         + " in {3} seconds.",
-        rb, rb.velocity.magnitude, maxLenght, maxTimeToFly));
+        rb, rb.velocity.magnitude, maxLenght, maxTimeToFly);
     yield return new WaitForSeconds(maxTimeToFly + 0.5f);  // Add a delta just in case.
 
     // Restore performance mode if harpoon hasn't hit anyting.
     if (rb.collisionDetectionMode != CollisionDetectionMode.Discrete) {
       rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
-      KAS_Shared.DebugLog(string.Format(
-          "Projectile {0} hasn't hit anything. Reset collision check mode to Discrete", rb));
+      KAS_Shared.DebugLog(
+          "Projectile {0} hasn't hit anything. Reset collision check mode to Discrete", rb);
     }
   }
 
   private bool IsLockable() {
     float distance = Vector3.Distance(winchAnchorNode.position, headAnchorNode.position);
     if (distance > lockMinDist) {
-      KAS_Shared.DebugLog("CanLock(Winch) - Can't lock, distance is : " + distance
-                          + " and lockMinDist set to : " + lockMinDist);
+      KAS_Shared.DebugLog(
+          "CanLock(Winch) - Can't lock, distance is : {0} and lockMinDist set to : {1}",
+          distance, lockMinDist);
       return false;
     }
     float fwdDot = Mathf.Abs(Vector3.Dot(winchAnchorNode.forward, headAnchorNode.forward));
     if (fwdDot <= lockMinFwdDot) {
-      KAS_Shared.DebugLog("CanLock(Winch) - Can't lock, forward dot is : " + fwdDot
-                          + " and lockMinFwdDot set to : " + lockMinFwdDot);
+      KAS_Shared.DebugLog(
+          "CanLock(Winch) - Can't lock, forward dot is : {0} and lockMinFwdDot set to : {1}",
+          fwdDot, lockMinFwdDot);
       return false;
     }
     float rollDot = Vector3.Dot(winchAnchorNode.up, headAnchorNode.up);
     if (rollDot <= float.MinValue) {
-      KAS_Shared.DebugLog("CanLock(Winch) - Can't lock, roll dot is : " + rollDot
-                          + " and lockMinRollDot set to : " + float.MinValue);
+      KAS_Shared.DebugLog(
+          "CanLock(Winch) - Can't lock, roll dot is : {0} and lockMinRollDot set to : {1}",
+          rollDot, float.MinValue);
       return false;
     }
     return true;
@@ -1196,7 +1182,7 @@ public class KASModuleWinch : KASModuleAttachCore {
     if (isBlocked && nodeConnectedPart && !nodeConnectedPort) {
       if (message) {
         ScreenMessages.PostScreenMessage(
-            "Winch is blocked by " + nodeConnectedPart.partInfo.title + "!",
+            string.Format("Winch is blocked by {0}!", nodeConnectedPart.partInfo.title),
             5, ScreenMessageStyle.UPPER_CENTER);
       }
       return true;
@@ -1423,6 +1409,27 @@ public class KASModuleWinch : KASModuleAttachCore {
     }
     if (GetHookGrapple()) {
       GetHookGrapple().ContextMenuDetach();
+    }
+  }
+
+  /// <summary>Accelerates or decelerates the motor to match the target speed.</summary>
+  /// <remarks>Acceleration is controlled via <see cref="motorAcceleration"/> which specifies speed
+  /// change per second.</remarks>
+  /// <param name="targetSpeed"></param>
+  void BringMotorToSpeed(float targetSpeed) {
+    if (!Mathf.Approximately(motorSpeed, targetSpeed)) {
+      var scaledMotorAcceleration = motorAcceleration * TimeWarp.deltaTime;
+      if (motorSpeed < targetSpeed) {
+        motorSpeed += scaledMotorAcceleration;
+        if (motorSpeed > targetSpeed) {
+          motorSpeed = targetSpeed;
+        }
+      } else {
+        motorSpeed -= scaledMotorAcceleration;
+        if (motorSpeed < targetSpeed) {
+          motorSpeed = targetSpeed;
+        }
+      }
     }
   }
 }

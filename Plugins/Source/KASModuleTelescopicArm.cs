@@ -217,9 +217,7 @@ public class KASModuleTelescopicArm : PartModule {
           "LoadBoomHead(TelescopicArm) - KASModulePhysicChild do not exist, adding it...");
       boomHeadPhysicModule = this.part.gameObject.AddComponent<KASModulePhysicChild>();
     }
-    boomHeadPhysicModule.mass = boomHeadMass;
-    boomHeadPhysicModule.physicObj = sections[0].transform.gameObject;
-    boomHeadPhysicModule.Start();
+    boomHeadPhysicModule.StartPhysics(sections[0].transform.gameObject, boomHeadMass);
 
     orgBoomHeadMass = this.part.mass;
     float newMass = this.part.mass - boomHeadMass;
@@ -387,8 +385,9 @@ public class KASModuleTelescopicArm : PartModule {
         }
       } else {
         if (this.part.vessel == FlightGlobals.ActiveVessel) {
-          ScreenMessages.PostScreenMessage(part.partInfo.title + " stopped ! Insufficient Power",
-                                           5, ScreenMessageStyle.UPPER_CENTER);
+          ScreenMessages.PostScreenMessage(
+              string.Format("{0} stopped ! Insufficient Power", part.partInfo.title),
+              5, ScreenMessageStyle.UPPER_CENTER);
         }
         stateField = "Insufficient Power";
         StopExtend();
@@ -426,8 +425,9 @@ public class KASModuleTelescopicArm : PartModule {
         }
       } else {
         if (this.part.vessel == FlightGlobals.ActiveVessel) {
-          ScreenMessages.PostScreenMessage(part.partInfo.title + " stopped ! Insufficient Power",
-                                           5, ScreenMessageStyle.UPPER_CENTER);
+          ScreenMessages.PostScreenMessage(
+              string.Format("{0} stopped ! Insufficient Power", part.partInfo.title),
+              5, ScreenMessageStyle.UPPER_CENTER);
         }
         stateField = "Insufficient Power";
         StopRetract();
